@@ -1,0 +1,17 @@
+{% extends "admin/change_form.html" %}
+{% block content %}
+  <script>
+    function toggleDetails() {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('show_details') === 'true') {
+        params.set('show_details', 'false');
+      } else {
+        params.set('show_details', 'true');
+      }
+      window.location.search = params.toString();
+    }
+  </script>
+
+  <button onclick="toggleDetails()">View More/Less</button>
+  {{ block.super }}
+{% endblock %}
