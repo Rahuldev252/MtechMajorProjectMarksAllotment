@@ -225,30 +225,18 @@
                         <td><input type="checkbox" name="student_ids" value="{{ student.id }}" class="checkbox"></td>
                         <td>{{ student.name }}</td>
                         <td>{{ student.roll_number }}</td>
+                        <td>{{ student.current_user_midsem_marks }}</td>
+                        <td>{{ student.current_user_endsem_marks }}</td>
                         <td>
-                            {% if request.user == student.professor %}
-                                {{ student.professor_marks }}
-                            {% elif request.user == student.examiner1 %}
-                                {{ student.examiner1_marks }}
-                            {% elif request.user == student.examiner2 %}
-                                {{ student.examiner2_marks }}
-                            {% elif request.user == student.examiner3 %}
-                                {{ student.examiner3_marks }}
+                            {% if role == 'examiner' %}
+                                {% if student.examiner_assignment.submission_status == 'Submitted' %}
+                                    <span class="btn disabled">Marks Submitted</span>
+                                {% else %}
+                                    <a href="{% url 'update_midsem_marks' student.id %}" class="btn">Update Midsem</a>
+                                {% endif %}
+                            {% else %}
+                                <a href="{% url 'update_midsem_marks' student.id %}" class="btn">Update Midsem</a>
                             {% endif %}
-                        </td>
-                        <td>
-                            {% if request.user == student.professor %}
-                                {{ student.professor_endmarks }}
-                            {% elif request.user == student.examiner1 %}
-                                {{ student.examiner1_endmarks }}
-                            {% elif request.user == student.examiner2 %}
-                                {{ student.examiner2_endmarks }}
-                            {% elif request.user == student.examiner3 %}
-                                {{ student.examiner3_endmarks }}
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a href="{% url 'update_midsem_marks' student.id %}" class="btn">Update Midsem</a>
                             <a href="{% url 'update_endsem_marks' student.id %}" class="btn">Update Endsem</a>
                         </td>
                     </tr>
@@ -258,17 +246,21 @@
                             <strong>Presentation Date:</strong> {{ student.presentation_date }}<br>
                             <strong>Presentation Time:</strong> From {{ student.presentation_from_time }} to {{ student.presentation_to_time }}<br>
                             <strong>Total Marks:</strong> {{ student.total_marks }}
+                            {% if role == 'examiner' %}
+                                <br><strong>Submission Status:</strong> {{ student.examiner_assignment.submission_status }}
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
-
             <div class="button-container">
-                <button type="submit" class="btn">Generate PDF And Send Email </button>
+                <button type="submit" class="btn">Generate PDF And Send Email</button>
                 <a href="{% url 'role_selection' %}" class="btn">Back to Role Selection</a> 
             </div>
         </form>
     </div>
+    
+    
 </body>
 </html>

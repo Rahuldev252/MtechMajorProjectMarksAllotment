@@ -338,27 +338,45 @@ def find_logo_path():
     return None
 
 
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q
+from .models import Student, MarkSheet, ExaminerAssignment
+
 @login_required
 def student_list_view(request, role):
+    user = request.user
+
     if role == 'mentor':
-        students = Student.objects.filter(professor=request.user)
+        students = Student.objects.filter(professor=user)
     elif role == 'examiner':
-        students = Student.objects.filter(
-            Q(examiner1=request.user) | Q(examiner2=request.user) | Q(examiner3=request.user)
-        ).exclude(professor=request.user)
+        examiner_assignments = ExaminerAssignment.objects.filter(examiner=user)
+        students = Student.objects.filter(examinerassignment__in=examiner_assignments).exclude(professor=user)
     
     for student in students:
-        marksheet = MarkSheet.objects.filter(student=student, user=request.user).first()
-        if marksheet:
-            student.current_user_marks = marksheet.total_marks
-        else:
-            student.current_user_marks = 0
+        if role == 'mentor':
+            student.current_user_midsem_marks = student.professor_marks
+            student.current_user_endsem_marks = student.professor_endmarks
+        elif role == 'examiner':
+            examiner_assignment = ExaminerAssignment.objects.filter(student=student, examiner=user).first()
+            if examiner_assignment:
+                student.current_user_midsem_marks = examiner_assignment.examiner_marks
+                student.current_user_endsem_marks = examiner_assignment.examiner_endmarks
+            else:
+                student.current_user_midsem_marks = 0
+                student.current_user_endsem_marks = 0
 
     context = {
         'students': students,
         'role': role,
     }
     return render(request, 'authentication/student_list.html', context)
+
+from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .models import Student, MarkSheet, ExaminerAssignment
+from .forms import MentorMarksForm, ExaminerMarksForm
 
 @login_required
 def update_midsem_marks(request, student_id):
@@ -372,6 +390,8 @@ def update_midsem_marks(request, student_id):
     else:
         role = 'examiner'
         FormClass = ExaminerMarksForm
+        # Check if the user is an examiner for this student
+        examiner_assignment = get_object_or_404(ExaminerAssignment, student=student, examiner=user)
 
     if request.method == 'POST':
         form = FormClass(request.POST)
@@ -384,31 +404,38 @@ def update_midsem_marks(request, student_id):
             marksheet.save()
 
             # Calculate total marks
-            total_marks = sum(form.cleaned_data[field] for field in form.cleaned_data if field not in ['guide_name', 'presentation_date', 'start_time', 'end_time', 'project_title'])
+            total_marks = sum(form.cleaned_data[field] for field in form.cleaned_data 
+                              if field not in ['guide_name', 'presentation_date', 'start_time', 'end_time', 'project_title'])
 
-            # Update Student model based on user role
+            # Update Student or ExaminerAssignment model based on user role
             if role == 'mentor':
                 student.professor_marks = total_marks
-            elif user == student.examiner1:
-                student.examiner1_marks = total_marks
-            elif user == student.examiner2:
-                student.examiner2_marks = total_marks
-            elif user == student.examiner3:
-                student.examiner3_marks = total_marks
+                student.save()
+            else:
+                examiner_assignment.examiner_marks = total_marks
+                examiner_assignment.submission_status = 'Submitted'  # Update submission status
+                examiner_assignment.save()
 
             student.update_total_marks()
             student.update_submission_status()
 
-           
             messages.success(request, "Midsem marks updated successfully and email sent.")
             return redirect('student_list', role=role)
     else:
-        form = FormClass()
+        # Pre-fill the form if marks already exist
+        initial_data = {}
+        if role == 'mentor':
+            initial_data = {field: getattr(student, field) for field in FormClass.base_fields if hasattr(student, field)}
+        else:
+            initial_data = {'examiner_marks': examiner_assignment.examiner_marks}
+        
+        form = FormClass(initial=initial_data)
 
     context = {
         'form': form,
         'student': student,
         'role': role,
+        'submission_status': examiner_assignment.submission_status if role == 'examiner' else None,
     }
     return render(request, 'authentication/update_midsem_marks.html', context)
 
@@ -424,6 +451,8 @@ def update_endsem_marks(request, student_id):
     else:
         role = 'examiner'
         FormClass = ExaminerEndsemMarksForm
+        # Check if the user is an examiner for this student
+        examiner_assignment = get_object_or_404(ExaminerAssignment, student=student, examiner=user)
 
     if request.method == 'POST':
         form = FormClass(request.POST)
@@ -436,34 +465,41 @@ def update_endsem_marks(request, student_id):
             marksheet.save()
 
             # Calculate total marks
-            total_marks = sum(form.cleaned_data[field] for field in form.cleaned_data if field not in ['guide_name', 'presentation_date', 'start_time', 'end_time', 'project_title'])
+            total_marks = sum(form.cleaned_data[field] for field in form.cleaned_data 
+                              if field not in ['guide_name', 'presentation_date', 'start_time', 'end_time', 'project_title'])
 
-            # Update Student model based on user role
+            # Update Student or ExaminerAssignment model based on user role
             if role == 'mentor':
                 student.professor_endmarks = total_marks
-            elif user == student.examiner1:
-                student.examiner1_endmarks = total_marks
-            elif user == student.examiner2:
-                student.examiner2_endmarks = total_marks
-            elif user == student.examiner3:
-                student.examiner3_endmarks = total_marks
+                student.save()
+            else:
+                examiner_assignment.examiner_endmarks = total_marks
+                examiner_assignment.submission_endstatus = 'Submitted'  # Update submission status
+                examiner_assignment.save()
 
             student.update_total_marks()
-            student.update_submission_status()
-
-           
+            student.update_submission_endstatus()
 
             messages.success(request, "Endsem marks updated successfully and email sent.")
             return redirect('student_list', role=role)
     else:
-        form = FormClass()
+        # Pre-fill the form if marks already exist
+        initial_data = {}
+        if role == 'mentor':
+            initial_data = {field: getattr(student, field) for field in FormClass.base_fields if hasattr(student, field)}
+        else:
+            initial_data = {'examiner_endmarks': examiner_assignment.examiner_endmarks}
+        
+        form = FormClass(initial=initial_data)
 
     context = {
         'form': form,
         'student': student,
         'role': role,
+        'submission_endstatus': examiner_assignment.submission_endstatus if role == 'examiner' else None,
     }
     return render(request, 'authentication/update_midsem_marks.html', context)
+
 
 # Create your views here.
 def home(request):
@@ -516,10 +552,17 @@ def student_dashboard(request):
 
     context = {
         'student': student,
-        'mid_marks': student.total_midsem_marks,
-        'endsem_marks': student.total_endsem_marks,
-        'total_marks': (student.total_midsem_marks)*0.4 + (student.total_endsem_marks)*0.6,
+        'midsem_submitted': student.submission_status == 'green',
+        'endsem_submitted': student.submission_endstatus == 'green',
+        'mid_marks': student.total_midsem_marks if student.submission_status == 'green' else None,
+        'endsem_marks': student.total_endsem_marks if student.submission_endstatus == 'green' else None,
     }
+
+    if context['midsem_submitted'] and context['endsem_submitted']:
+        context['total_marks'] = (student.total_midsem_marks * 0.4) + (student.total_endsem_marks * 0.6)
+    else:
+        context['total_marks'] = None
+
     return render(request, 'dash.html', context)
 
 def custom_login(request):
