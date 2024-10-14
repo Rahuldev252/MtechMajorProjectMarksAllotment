@@ -95,9 +95,9 @@ class ExaminerMarksForm(forms.ModelForm):
     depth_of_understanding = forms.IntegerField(min_value=0, max_value=8, label="Depth of Understanding(8)")
     work_done_and_results = forms.IntegerField(min_value=0, max_value=12, label="Work Done Results(12)")
     exceptional_work = forms.IntegerField(min_value=0, max_value=6, label="Exceptional Work(6)")
-    viva_voce = forms.IntegerField(min_value=0, max_value=12, label="Viva Voce(12)")
-    presentation = forms.IntegerField(min_value=0, max_value=6, label="Presentation(6)")
-    report = forms.IntegerField(min_value=0, max_value=3, label="Report(3)")
+    viva_voce = forms.IntegerField(min_value=0, max_value=8, label="Viva Voce(8)")
+    presentation = forms.IntegerField(min_value=0, max_value=4, label="Presentation(4)")
+    report = forms.IntegerField(min_value=0, max_value=2, label="Report(2)")
     class Meta:
         model = MarkSheet
         fields = [
@@ -143,9 +143,9 @@ class ExaminerEndsemMarksForm(forms.Form):
     depth_of_understanding = forms.IntegerField(min_value=0, max_value=8, label="Depth of Understanding(8)")
     work_done_and_results = forms.IntegerField(min_value=0, max_value=12, label="Work Done Results(12)")
     exceptional_work = forms.IntegerField(min_value=0, max_value=6, label="Exceptional Work(6)")
-    viva_voce = forms.IntegerField(min_value=0, max_value=12, label="Viva Voce(12)")
-    presentation = forms.IntegerField(min_value=0, max_value=6, label="Presentation(6)")
-    report = forms.IntegerField(min_value=0, max_value=3, label="Report(3)")
+    viva_voce = forms.IntegerField(min_value=0, max_value=8, label="Viva Voce(8)")
+    presentation = forms.IntegerField(min_value=0, max_value=4, label="Presentation(4)")
+    report = forms.IntegerField(min_value=0, max_value=2, label="Report(2)")
 
     class Meta:
         model = MarkSheet

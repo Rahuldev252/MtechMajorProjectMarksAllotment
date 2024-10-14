@@ -70,6 +70,7 @@
             display: flex;
             align-items: center;
             gap: 1rem;
+            position: relative;
         }
 
         .user-avatar {
@@ -78,6 +79,7 @@
             border-radius: 50%;
             object-fit: cover;
             border: 2px solid var(--accent-color);
+            cursor: pointer;
         }
 
         .user-name {
@@ -85,6 +87,64 @@
             font-weight: 600;
             color: #ffffff;
         }
+
+        /* Dropdown Menu CSS */
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 60px;
+            right: 0;
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            z-index: 100;
+            width: 250px;
+            padding: 20px;
+            color: black;
+        }
+
+        .dropdown-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .dropdown-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .dropdown-name {
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+        .dropdown-department {
+            font-size: 0.9rem;
+            color: grey;
+            margin-bottom: 15px;
+        }
+
+        .logout-btn {
+            background-color:rgba(57, 65, 163, 0.9);
+            color: #f0f0f0;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background-color: rgba(80, 90, 195, 0.9);
+        }
+
+        /* Other styles (no change to non-navbar elements) */
         .status-green {
             color: green;
             font-weight: bold;
@@ -185,24 +245,56 @@
     </style>
     <script>
         $(document).ready(function() {
+            // Toggle details rows when clicked
             $(".toggle-details").click(function() {
                 $(this).next(".details-row").toggle();
             });
-
+    
+            // Select or deselect all checkboxes
             $("#select-all").click(function() {
                 $("input[name='student_ids']").prop('checked', this.checked);
             });
+    
+            // Toggle dropdown on avatar click
+            $("#avatar-img").click(function(event) {
+                event.stopPropagation();  // Prevents click event from bubbling up
+                var dropdown = $("#dropdown-menu");
+                dropdown.toggle();  // Toggles the dropdown's visibility
+            });
+    
+            // Close the dropdown if clicked outside of it
+            $(document).click(function(event) {
+                var target = $(event.target);
+                if (!target.closest("#dropdown-menu").length && !target.closest("#avatar-img").length) {
+                    $("#dropdown-menu").hide();  // Hide the dropdown when clicked outside
+                }
+            });
         });
     </script>
+    
 </head>
 <body>
     <div class="overlay"></div>
     <nav>
         <a href="#" class="logo">NITK</a>
         <div class="user-profile">
-            <img src="{% static 'user-avatar.jpg' %}" alt="User Avatar" class="user-avatar">
+            <img src="{% static 'user-avatar.jpg' %}" alt="User Avatar" class="user-avatar" id="avatar-img">
             <span class="user-name">{{ request.user.get_full_name }}</span>
+        
+            <!-- Dropdown Menu -->
+            <div class="dropdown-menu" id="dropdown-menu">
+                <div class="dropdown-header">
+                    <img src="{% static 'user-avatar.jpg' %}" alt="User Avatar" class="dropdown-avatar">
+                    <span class="dropdown-name">{{ request.user.get_full_name }}</span>
+                </div>
+                <div class="dropdown-department">Department of IT, NITK</div>
+                <form action="{% url 'logout' %}" method="post" style="width: 100%;">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn">Logout</button>
+                </form>
+            </div>
         </div>
+        
     </nav>
     <div class="container">
         <h2>Student List - {{ role|title }}</h2>
@@ -225,18 +317,30 @@
                         <td><input type="checkbox" name="student_ids" value="{{ student.id }}" class="checkbox"></td>
                         <td>{{ student.name }}</td>
                         <td>{{ student.roll_number }}</td>
-                        <td>{{ student.current_user_midsem_marks }}</td>
-                        <td>{{ student.current_user_endsem_marks }}</td>
                         <td>
-                            {% if role == 'examiner' %}
-                                {% if student.examiner_assignment.submission_status == 'Submitted' %}
-                                    <span class="btn disabled">Marks Submitted</span>
-                                {% else %}
-                                    <a href="{% url 'update_midsem_marks' student.id %}" class="btn">Update Midsem</a>
-                                {% endif %}
-                            {% else %}
-                                <a href="{% url 'update_midsem_marks' student.id %}" class="btn">Update Midsem</a>
+                            {% if request.user == student.professor %}
+                                {{ student.professor_marks }}
+                            {% elif request.user == student.examiner1 %}
+                                {{ student.examiner1_marks }}
+                            {% elif request.user == student.examiner2 %}
+                                {{ student.examiner2_marks }}
+                            {% elif request.user == student.examiner3 %}
+                                {{ student.examiner3_marks }}
                             {% endif %}
+                        </td>
+                        <td>
+                            {% if request.user == student.professor %}
+                                {{ student.professor_endmarks }}
+                            {% elif request.user == student.examiner1 %}
+                                {{ student.examiner1_endmarks }}
+                            {% elif request.user == student.examiner2 %}
+                                {{ student.examiner2_endmarks }}
+                            {% elif request.user == student.examiner3 %}
+                                {{ student.examiner3_endmarks }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'update_midsem_marks' student.id %}" class="btn">Update Midsem</a>
                             <a href="{% url 'update_endsem_marks' student.id %}" class="btn">Update Endsem</a>
                         </td>
                     </tr>
@@ -246,21 +350,17 @@
                             <strong>Presentation Date:</strong> {{ student.presentation_date }}<br>
                             <strong>Presentation Time:</strong> From {{ student.presentation_from_time }} to {{ student.presentation_to_time }}<br>
                             <strong>Total Marks:</strong> {{ student.total_marks }}
-                            {% if role == 'examiner' %}
-                                <br><strong>Submission Status:</strong> {{ student.examiner_assignment.submission_status }}
-                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+
             <div class="button-container">
-                <button type="submit" class="btn">Generate PDF And Send Email</button>
+                <button type="submit" class="btn">Confirm and Send Email</button>
                 <a href="{% url 'role_selection' %}" class="btn">Back to Role Selection</a> 
             </div>
         </form>
     </div>
-    
-    
 </body>
 </html>
