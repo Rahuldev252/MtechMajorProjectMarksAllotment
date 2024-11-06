@@ -280,7 +280,6 @@
         <div class="user-profile">
             <img src="{% static 'user-avatar.jpg' %}" alt="User Avatar" class="user-avatar" id="avatar-img">
             <span class="user-name">{{ request.user.get_full_name }}</span>
-        
             <!-- Dropdown Menu -->
             <div class="dropdown-menu" id="dropdown-menu">
                 <div class="dropdown-header">
@@ -294,7 +293,6 @@
                 </form>
             </div>
         </div>
-        
     </nav>
     <div class="container">
         <h2>Student List - {{ role|title }}</h2>
@@ -317,28 +315,8 @@
                         <td><input type="checkbox" name="student_ids" value="{{ student.id }}" class="checkbox"></td>
                         <td>{{ student.name }}</td>
                         <td>{{ student.roll_number }}</td>
-                        <td>
-                            {% if request.user == student.professor %}
-                                {{ student.professor_marks }}
-                            {% elif request.user == student.examiner1 %}
-                                {{ student.examiner1_marks }}
-                            {% elif request.user == student.examiner2 %}
-                                {{ student.examiner2_marks }}
-                            {% elif request.user == student.examiner3 %}
-                                {{ student.examiner3_marks }}
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if request.user == student.professor %}
-                                {{ student.professor_endmarks }}
-                            {% elif request.user == student.examiner1 %}
-                                {{ student.examiner1_endmarks }}
-                            {% elif request.user == student.examiner2 %}
-                                {{ student.examiner2_endmarks }}
-                            {% elif request.user == student.examiner3 %}
-                                {{ student.examiner3_endmarks }}
-                            {% endif %}
-                        </td>
+                        <td>{{ student.current_user_midsem_marks }}</td>
+                        <td>{{ student.current_user_endsem_marks }}</td>
                         <td>
                             <a href="{% url 'update_midsem_marks' student.id %}" class="btn">Update Midsem</a>
                             <a href="{% url 'update_endsem_marks' student.id %}" class="btn">Update Endsem</a>

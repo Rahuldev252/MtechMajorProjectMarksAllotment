@@ -352,7 +352,7 @@ def student_list_view(request, role):
     elif role == 'examiner':
         examiner_assignments = ExaminerAssignment.objects.filter(examiner=user)
         students = Student.objects.filter(examinerassignment__in=examiner_assignments).exclude(professor=user)
-    
+
     for student in students:
         if role == 'mentor':
             student.current_user_midsem_marks = student.professor_marks

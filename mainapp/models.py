@@ -44,8 +44,18 @@ class Student(models.Model):
     professor_endmarks = models.IntegerField(default=0)
 
     def update_total_marks(self):
-        self.total_midsem_marks = self.professor_marks + sum(assignment.examiner_marks for assignment in self.examinerassignment_set.all())/3
-        self.total_endsem_marks = self.professor_endmarks + sum(assignment.examiner_endmarks for assignment in self.examinerassignment_set.all())/3
+        
+        num_examiners = self.examinerassignment_set.count()
+        print(f"Number of Examiners: {num_examiners}")
+        if num_examiners > 0:
+        
+            self.total_midsem_marks = self.professor_marks + (sum(assignment.examiner_marks for assignment in self.examinerassignment_set.all()) / num_examiners)
+            self.total_endsem_marks = self.professor_endmarks + (sum(assignment.examiner_endmarks for assignment in self.examinerassignment_set.all()) / num_examiners)
+        else:
+        
+            self.total_midsem_marks = self.professor_marks
+            self.total_endsem_marks = self.professor_endmarks
+
         self.save()
 
     def check_all_marks_submitted(self):
